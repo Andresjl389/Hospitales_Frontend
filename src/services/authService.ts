@@ -35,6 +35,22 @@ class AuthService {
           "token_expires_at",
           String(Date.now() + loginData.expires_in * 1000)
         );
+
+        /**
+         * El backend establece cookies HTTP-only en su propio dominio (API_URL),
+         * pero el middleware del frontend sólo puede leer cookies del dominio actual.
+         * Creamos una cookie local con el access_token para permitir que el middleware
+         * autentique las rutas protegidas después del login.
+         */
+        document.cookie = [
+          `access_token=${loginData.access_token}`,
+          "path=/",
+          `max-age=${loginData.expires_in}`,
+          "SameSite=Lax",
+          window.location.protocol === "https:" ? "Secure" : "",
+        ]
+          .filter(Boolean)
+          .join("; ");
       }
 
       // 3. Obtener información del usuario (las cookies se envían automáticamente)
