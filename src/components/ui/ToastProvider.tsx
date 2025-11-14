@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { CheckCircle, Info, AlertTriangle } from "lucide-react";
 
 type ToastType = "success" | "error" | "info";
@@ -22,7 +23,7 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
-export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
+export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const removeToast = useCallback((id: string) => {
@@ -61,7 +62,7 @@ export const useToast = () => {
   return context;
 };
 
-const iconByType: Record<ToastType, JSX.Element> = {
+const iconByType: Record<ToastType, ReactElement> = {
   success: <CheckCircle className="w-5 h-5" />,
   error: <AlertTriangle className="w-5 h-5" />,
   info: <Info className="w-5 h-5" />,
