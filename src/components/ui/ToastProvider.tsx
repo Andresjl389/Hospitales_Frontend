@@ -26,6 +26,38 @@ const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  const normalizeDescription = useCallback((raw?: string): string | undefined => {
+    if (!raw) return undefined;
+    const trimmed = raw.trim();
+    if (!trimmed) return undefined;
+
+    const fallback = "Ocurrió un error, intenta nuevamente.";
+
+    // Intentar parsear JSON para extraer mensajes legibles
+    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+      try {
+        const parsed = JSON.parse(trimmed);
+
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const first = parsed[0];
+          if (typeof first === "string") return first;
+          if (first && typeof first === "object") {
+            return first.detail || first.message || Object.values(first).find((v) => typeof v === "string") || fallback;
+          }
+        }
+
+        if (parsed && typeof parsed === "object") {
+          return parsed.detail || parsed.message || Object.values(parsed).find((v) => typeof v === "string") || fallback;
+        }
+      } catch {
+        return fallback;
+      }
+    }
+
+    // Si no es JSON, devolver cadena limpia
+    return trimmed;
+  }, []);
+
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
@@ -33,11 +65,12 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const showToast = useCallback(
     ({ type = "info", title, description, duration = 4000 }: ToastOptions) => {
       const id = crypto.randomUUID();
-      setToasts((prev) => [...prev, { id, type, title, description, duration }]);
+      const safeDescription = normalizeDescription(description);
+      setToasts((prev) => [...prev, { id, type, title, description: safeDescription, duration }]);
 
       setTimeout(() => removeToast(id), duration);
     },
-    [removeToast]
+    [removeToast, normalizeDescription]
   );
 
   const value = useMemo(() => ({ showToast }), [showToast]);

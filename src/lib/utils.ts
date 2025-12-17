@@ -65,3 +65,13 @@ export function truncate(text: string, length: number): string {
 export function removeDiacritics(str: string): string {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
+
+export function isBooleanQuestionType(typeName: string): boolean {
+  const normalized = removeDiacritics(typeName).toLowerCase().trim();
+  return (
+    normalized === "falso o verdadero" ||
+    normalized === "verdadero o falso" ||
+    normalized === "falso/verdadero" ||
+    normalized === "verdadero/falso"
+  );
+}

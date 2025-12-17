@@ -1,7 +1,7 @@
 // src/services/adminService.ts
 import { API_URL } from "@/lib/constants";
 import { authService } from "./authService";
-import { User } from "@/types/auth";
+import { Role, User } from "@/types/auth";
 import { Trainings } from "@/types/capacitacion";
 
 interface Area {
@@ -105,6 +105,19 @@ class AdminService {
       return await this.handleResponse<Area[]>(response);
     } catch (error) {
       console.error("❌ Error al obtener áreas:", error);
+      throw error;
+    }
+  }
+
+  async getRoles(): Promise<Role[]> {
+    try {
+      console.log("📡 Obteniendo roles...");
+      const response = await fetch(`${API_URL}/roles`, {
+        credentials: "include",
+      });
+      return await this.handleResponse<Role[]>(response);
+    } catch (error) {
+      console.error("❌ Error al obtener roles:", error);
       throw error;
     }
   }

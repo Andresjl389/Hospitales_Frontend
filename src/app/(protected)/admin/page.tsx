@@ -33,22 +33,27 @@ export default function AdminDashboard() {
           adminService.getAreas(),
         ]);
 
-        const totalUsuarios = users.length;
-        const totalCapacitaciones = trainings.length;
-        const totalAsignaciones = assignments.length;
+        const usersList = Array.isArray(users) ? users : [];
+        const trainingsList = Array.isArray(trainings) ? trainings : [];
+        const assignmentsList = Array.isArray(assignments) ? assignments : [];
+        const areasList = Array.isArray(areas) ? areas : [];
 
-        const completadas = assignments.filter((a) =>
-          a.status.name.toLowerCase().includes('complet')
+        const totalUsuarios = usersList.length;
+        const totalCapacitaciones = trainingsList.length;
+        const totalAsignaciones = assignmentsList.length;
+
+        const completadas = assignmentsList.filter((a) =>
+          (a.status?.name || '').toLowerCase().includes('complet')
         ).length;
         const cumplimiento = totalAsignaciones
           ? Math.round((completadas / totalAsignaciones) * 100)
           : 0;
 
         // Crear resumen por área
-        const resumen = areas.map((area) => {
-          const asigArea = assignments.filter((a) => a.area.id === area.id);
+        const resumen = areasList.map((area) => {
+          const asigArea = assignmentsList.filter((a) => a.area?.id === area.id);
           const completadasArea = asigArea.filter((a) =>
-            a.status.name.toLowerCase().includes('complet')
+            (a.status?.name || '').toLowerCase().includes('complet')
           ).length;
           return {
             area: area.name,
@@ -56,6 +61,19 @@ export default function AdminDashboard() {
             completadas: completadasArea,
           };
         });
+
+        // Acumular asignaciones sin área para que no exploten los cálculos
+        const sinArea = assignmentsList.filter((a) => !a.area?.id);
+        if (sinArea.length) {
+          const completadasArea = sinArea.filter((a) =>
+            (a.status?.name || '').toLowerCase().includes('complet')
+          ).length;
+          resumen.push({
+            area: 'Sin área',
+            total: sinArea.length,
+            completadas: completadasArea,
+          });
+        }
 
         // Ordenar por cantidad de completadas (descendente)
         resumen.sort((a, b) => b.completadas - a.completadas);

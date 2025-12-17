@@ -15,6 +15,11 @@ type AreaOption = {
   name: string;
 };
 
+type RoleOption = {
+  id: string;
+  name: string;
+};
+
 type UserFormState = {
   firstName: string;
   lastName: string;
@@ -22,6 +27,7 @@ type UserFormState = {
   email: string;
   password: string;
   areaId: string;
+  roleId: string;
 };
 
 type ModalMode = "create" | "edit";
@@ -33,6 +39,7 @@ const INITIAL_FORM_STATE: UserFormState = {
   email: "",
   password: "",
   areaId: "",
+  roleId: "",
 };
 
 const AVATAR_COLORS = [
@@ -56,6 +63,7 @@ const getAvatarColor = (index: number) =>
 export default function AdminUsuariosPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [areas, setAreas] = useState<AreaOption[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,6 +99,7 @@ export default function AdminUsuariosPage() {
         email: user.email ?? "",
         password: "",
         areaId: user.area?.id ?? "",
+        roleId: user.role?.id ?? "",
       });
     } else {
       setFormMode("create");
@@ -112,12 +121,14 @@ export default function AdminUsuariosPage() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [usersResponse, areasResponse] = await Promise.all([
+        const [usersResponse, areasResponse, rolesResponse] = await Promise.all([
           adminService.getUsers(),
           adminService.getAreas(),
+          adminService.getRoles(),
         ]);
         setUsers(usersResponse);
         setAreas(areasResponse);
+        setRoles(rolesResponse);
       } catch (err) {
         console.error("❌ Error obteniendo usuarios:", err);
         const message =
@@ -231,6 +242,7 @@ export default function AdminUsuariosPage() {
           email: formData.email.trim(),
           password: formData.password.trim(),
           area_id: formData.areaId ? formData.areaId : null,
+          role_id: formData.roleId ? formData.roleId : null,
         });
         setUsers((prev) => [newUser, ...prev]);
         showToast({
@@ -246,6 +258,7 @@ export default function AdminUsuariosPage() {
           cedula: formData.cedula.trim(),
           email: formData.email.trim(),
           area_id: formData.areaId ? formData.areaId : null,
+          role_id: formData.roleId ? formData.roleId : null,
         });
         setUsers((prev) =>
           prev.map((user) => (user.id === updatedUser.id ? updatedUser : user))
@@ -565,6 +578,23 @@ export default function AdminUsuariosPage() {
                   {formErrors.email && (
                     <p className="text-xs text-red-600 mt-1">{formErrors.email}</p>
                   )}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Rol
+                  </label>
+                  <select
+                    value={formData.roleId}
+                    onChange={handleInputChange("roleId")}
+                    className={getInputClasses(false)}
+                  >
+                    <option value="">Selecciona un rol</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">

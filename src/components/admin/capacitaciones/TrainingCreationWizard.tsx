@@ -8,6 +8,7 @@ import { adminService } from '@/services/adminService';
 import { questionnaireService } from '@/services/questionnaireService';
 import { Option, Question, QuestionType } from '@/types/questionnaire';
 import { useToast } from '@/components/ui/ToastProvider';
+import { isBooleanQuestionType } from '@/lib/utils';
 type CreateStep = 'training' | 'areas' | 'questionnaire';
 
 type PreviewStore = {
@@ -19,6 +20,8 @@ type QuestionWithOptions = {
   question: Question;
   options: Option[];
 };
+
+type BooleanChoice = 'verdadero' | 'falso';
 
 type AreaOption = Awaited<ReturnType<typeof adminService.getAreas>>[number];
 
@@ -52,7 +55,11 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
   const [questionnaireId, setQuestionnaireId] = useState<string | null>(null);
   const [questionnaireLoading, setQuestionnaireLoading] = useState(false);
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
-  const [questionDraft, setQuestionDraft] = useState({ text: '', typeId: '' });
+  const [questionDraft, setQuestionDraft] = useState<{
+    text: string;
+    typeId: string;
+    booleanCorrect: BooleanChoice;
+  }>({ text: '', typeId: '', booleanCorrect: 'verdadero' });
   const [creatingQuestion, setCreatingQuestion] = useState(false);
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
   const [optionDrafts, setOptionDrafts] = useState<
@@ -78,7 +85,7 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
     setQuestionnaireId(null);
     setQuestionnaireLoading(false);
     setQuestionTypes([]);
-    setQuestionDraft({ text: '', typeId: '' });
+    setQuestionDraft({ text: '', typeId: '', booleanCorrect: 'verdadero' });
     setQuestions([]);
     setOptionDrafts({});
     setOptionLoading({});
@@ -153,6 +160,7 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
           setQuestionDraft((prev) => ({
             ...prev,
             typeId: prev.typeId || types[0]?.id || '',
+            booleanCorrect: prev.booleanCorrect || 'verdadero',
           }));
         }
       } catch (error) {
@@ -171,6 +179,9 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
   }, [isOpen, step, createdTraining, questionnaireId, questionTypes.length, showToast]);
 
   if (!isOpen) return null;
+
+  const selectedQuestionType = questionTypes.find((type) => type.id === questionDraft.typeId);
+  const isBooleanSelected = selectedQuestionType ? isBooleanQuestionType(selectedQuestionType.name) : false;
 
   const handleInputChange = (field: 'title' | 'description', value: string) => {
     setForm((prev) => (field === 'title' ? { ...prev, title: value } : { ...prev, description: value }));
@@ -224,7 +235,6 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
 
     try {
       const newTraining = await capacitacionesService.createTraining(formData);
-      onTrainingCreated(newTraining);
       setCreatedTraining(newTraining);
       showToast({
         type: 'success',
@@ -321,6 +331,9 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
       return;
     }
 
+    const selectedType = questionTypes.find((type) => type.id === questionDraft.typeId);
+    const isBooleanType = selectedType ? isBooleanQuestionType(selectedType.name) : false;
+
     setCreatingQuestion(true);
 
     try {
@@ -330,16 +343,33 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
         questionDraft.typeId
       );
 
-      setQuestions((prev) => [...prev, { question: newQuestion, options: [] }]);
-      setOptionDrafts((prev) => ({
-        ...prev,
-        [newQuestion.id]: { text: '', isCorrect: false },
-      }));
-      setQuestionDraft((prev) => ({ ...prev, text: '' }));
+      let newOptions: Option[] = [];
+
+      if (isBooleanType) {
+        const correctChoice = questionDraft.booleanCorrect;
+        const [trueOption, falseOption] = await Promise.all([
+          questionnaireService.createOption(newQuestion.id, 'Verdadero', correctChoice === 'verdadero'),
+          questionnaireService.createOption(newQuestion.id, 'Falso', correctChoice === 'falso'),
+        ]);
+        newOptions = [trueOption, falseOption];
+      }
+
+      setQuestions((prev) => [...prev, { question: newQuestion, options: newOptions }]);
+
+      if (!isBooleanType) {
+        setOptionDrafts((prev) => ({
+          ...prev,
+          [newQuestion.id]: { text: '', isCorrect: false },
+        }));
+      }
+
+      setQuestionDraft((prev) => ({ ...prev, text: '', booleanCorrect: 'verdadero' }));
       showToast({
         type: 'success',
         title: 'Pregunta creada',
-        description: 'Ahora agrega las respuestas correspondientes.',
+        description: isBooleanType
+          ? 'Se agregaron las opciones Verdadero/Falso automáticamente.'
+          : 'Ahora agrega las respuestas correspondientes.',
       });
     } catch (error) {
       console.error('❌ Error al crear pregunta:', error);
@@ -371,6 +401,16 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
   };
 
   const handleAddOption = async (questionId: string) => {
+    const question = questions.find((item) => item.question.id === questionId)?.question;
+    if (question && isBooleanQuestionType(question.question_types.name)) {
+      showToast({
+        type: 'info',
+        title: 'Pregunta de Verdadero/Falso',
+        description: 'Las opciones ya están creadas automáticamente para este tipo de pregunta.',
+      });
+      return;
+    }
+
     const draft = optionDrafts[questionId] ?? { text: '', isCorrect: false };
 
     if (!draft.text.trim()) {
@@ -418,12 +458,33 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
   };
 
   const handleCompleteCreation = () => {
-    showToast({
-      type: 'success',
-      title: 'Configuración finalizada',
-      description: 'Puedes cerrar la tarjeta cuando lo desees.',
-    });
-    onClose();
+    const publishTraining = async () => {
+      try {
+        if (!createdTraining) {
+          throw new Error('No se encontró la capacitación creada');
+        }
+
+        // Re-consultar la capacitación para asegurarnos de traer URL de imagen/video ya procesados
+        const refreshed = await capacitacionesService.getTrainingById(createdTraining.id);
+        onTrainingCreated(refreshed);
+        showToast({
+          type: 'success',
+          title: 'Configuración finalizada',
+          description: 'La capacitación ya aparece en el listado con sus recursos.',
+        });
+      } catch (error) {
+        console.error('❌ Error finalizando configuración:', error);
+        showToast({
+          type: 'error',
+          title: 'Error al finalizar',
+          description: error instanceof Error ? error.message : 'No se pudo publicar la capacitación.',
+        });
+      } finally {
+        onClose();
+      }
+    };
+
+    publishTraining();
   };
 
   const handleClose = () => {
@@ -597,7 +658,13 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
                   <label className="block text-sm text-gray-600 mb-1">Tipo de pregunta</label>
                   <select
                     value={questionDraft.typeId}
-                    onChange={(e) => setQuestionDraft((prev) => ({ ...prev, typeId: e.target.value }))}
+                    onChange={(e) =>
+                      setQuestionDraft((prev) => ({
+                        ...prev,
+                        typeId: e.target.value,
+                        booleanCorrect: prev.booleanCorrect || 'verdadero',
+                      }))
+                    }
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500"
                   >
                     <option value="">Selecciona un tipo</option>
@@ -608,6 +675,37 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
                     ))}
                   </select>
                 </div>
+                {isBooleanSelected && (
+                  <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+                    <p className="text-sm text-gray-600">Marca la respuesta correcta:</p>
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="radio"
+                        name="boolean-correct"
+                        value="verdadero"
+                        checked={questionDraft.booleanCorrect === 'verdadero'}
+                        onChange={() =>
+                          setQuestionDraft((prev) => ({ ...prev, booleanCorrect: 'verdadero' }))
+                        }
+                        className="accent-blue-600"
+                      />
+                      Verdadero
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="radio"
+                        name="boolean-correct"
+                        value="falso"
+                        checked={questionDraft.booleanCorrect === 'falso'}
+                        onChange={() =>
+                          setQuestionDraft((prev) => ({ ...prev, booleanCorrect: 'falso' }))
+                        }
+                        className="accent-blue-600"
+                      />
+                      Falso
+                    </label>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end">
                 <Button
@@ -628,6 +726,7 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
                 ) : (
                   questions.map(({ question, options }) => {
                     const draft = optionDrafts[question.id] ?? { text: '', isCorrect: false };
+                    const isBooleanTypeQuestion = isBooleanQuestionType(question.question_types.name);
                     return (
                       <div key={question.id} className="border rounded-xl p-4 space-y-3">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -661,31 +760,37 @@ export function TrainingCreationWizard({ isOpen, onClose, onTrainingCreated }: P
                           )}
                         </div>
 
-                        <div className="flex flex-col md:flex-row md:items-center gap-3">
-                          <input
-                            type="text"
-                            value={draft.text}
-                            onChange={(e) => handleOptionDraftChange(question.id, 'text', e.target.value)}
-                            className="flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500"
-                            placeholder="Escribe una opción de respuesta"
-                          />
-                          <label className="flex items-center gap-2 text-sm text-gray-600">
+                        {isBooleanTypeQuestion ? (
+                          <p className="text-sm text-blue-700 bg-blue-50 border border-blue-100 px-3 py-2 rounded">
+                            Las opciones Verdadero/Falso se crearon automáticamente para esta pregunta.
+                          </p>
+                        ) : (
+                          <div className="flex flex-col md:flex-row md:items-center gap-3">
                             <input
-                              type="checkbox"
-                              checked={draft.isCorrect}
-                              onChange={(e) => handleOptionDraftChange(question.id, 'isCorrect', e.target.checked)}
-                              className="accent-blue-600"
+                              type="text"
+                              value={draft.text}
+                              onChange={(e) => handleOptionDraftChange(question.id, 'text', e.target.value)}
+                              className="flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500"
+                              placeholder="Escribe una opción de respuesta"
                             />
-                            Es correcta
-                          </label>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAddOption(question.id)}
-                            isLoading={optionLoading[question.id]}
-                          >
-                            Agregar respuesta
-                          </Button>
-                        </div>
+                            <label className="flex items-center gap-2 text-sm text-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={draft.isCorrect}
+                                onChange={(e) => handleOptionDraftChange(question.id, 'isCorrect', e.target.checked)}
+                                className="accent-blue-600"
+                              />
+                              Es correcta
+                            </label>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAddOption(question.id)}
+                              isLoading={optionLoading[question.id]}
+                            >
+                              Agregar respuesta
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     );
                   })
