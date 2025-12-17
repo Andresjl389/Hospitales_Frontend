@@ -10,6 +10,7 @@ import { CapacitacionCard } from "@/components/cards/CapacitacionCard";
 import { useAuth } from "@/hooks/useAuth";
 import Modal from "@/components/ui/Modal";
 import { Clock } from "lucide-react";
+import { buildMediaUrl } from "@/lib/media";
 
 export default function CapacitacionesPage() {
   const router = useRouter();
@@ -130,7 +131,7 @@ export default function CapacitacionesPage() {
               {/* Imagen de fondo */}
               <div className="relative h-64 w-full overflow-hidden">
                 <Image
-                  src={selectedCap.trainings.url_image}
+                  src={buildMediaUrl(selectedCap.trainings.url_image) ?? ""}
                   alt={selectedCap.trainings.title}
                   width={960}
                   height={360}

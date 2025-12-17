@@ -9,6 +9,7 @@ import { adminService } from '@/services/adminService';
 import { questionnaireService } from '@/services/questionnaireService';
 import { Option, Question, QuestionType } from '@/types/questionnaire';
 import { isBooleanQuestionType } from '@/lib/utils';
+import { buildMediaUrl } from '@/lib/media';
 
 interface Props {
   trainingId: string | null;
@@ -60,8 +61,6 @@ export function TrainingEditCard({ trainingId, onClose, onTrainingUpdated }: Pro
   const [creatingQuestion, setCreatingQuestion] = useState(false);
   const [optionDrafts, setOptionDrafts] = useState<Record<string, { text: string; isCorrect: boolean }>>({});
   const [optionLoading, setOptionLoading] = useState<Record<string, boolean>>({});
-
-  if (!trainingId) return null;
 
   const revokePreview = (type: 'image' | 'video') => {
     const url = previewUrls.current[type];
@@ -516,6 +515,8 @@ export function TrainingEditCard({ trainingId, onClose, onTrainingUpdated }: Pro
   const selectedQuestionType = questionTypes.find((type) => type.id === questionDraft.typeId);
   const isBooleanSelected = selectedQuestionType ? isBooleanQuestionType(selectedQuestionType.name) : false;
 
+  if (!trainingId) return null;
+
   return (
     <div className="bg-white border border-blue-100 rounded-2xl shadow-sm p-6 space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -563,8 +564,8 @@ export function TrainingEditCard({ trainingId, onClose, onTrainingUpdated }: Pro
               onInputChange={handleInputChange}
               onFileChange={handleFileChange}
               accentColor="blue"
-              imageFallback={training.url_image}
-              videoFallback={training.url_video}
+              imageFallback={buildMediaUrl(training.url_image)}
+              videoFallback={buildMediaUrl(training.url_video)}
               titlePlaceholder="Título de la capacitación"
               descriptionPlaceholder="Resumen de la capacitación"
             />

@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { questionnaireService } from "@/services/questionnaireService";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useConfirm } from "@/components/ui/ConfirmProvider";
+import { buildMediaUrl } from "@/lib/media";
 
 export default function AdminCapacitacionesPage() {
   const [capacitaciones, setCapacitaciones] = useState<Trainings[]>([]);
@@ -289,7 +290,7 @@ export default function AdminCapacitacionesPage() {
                     <td className="py-4 px-4">
                       {capa.url_image ? (
                         <Image
-                          src={capa.url_image}
+                          src={buildMediaUrl(capa.url_image) ?? ""}
                           alt={capa.title}
                           width={40}
                           height={40}

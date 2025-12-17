@@ -95,6 +95,11 @@ class CapacitacionesService {
         credentials: "include",
       });
 
+      if (response.status === 404) {
+        console.warn("⚠️ No hay capacitaciones asignadas para este usuario");
+        return [];
+      }
+
       const data = await this.handleResponse<UserTraining[]>(response);
       console.log("✅ Asignaciones obtenidas:", data);
 

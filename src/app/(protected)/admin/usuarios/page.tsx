@@ -221,6 +221,10 @@ export default function AdminUsuariosPage() {
       } else if (formData.password.trim().length < 6) {
         errors.password = "Mínimo 6 caracteres";
       }
+    } else if (formMode === "edit" && formData.password.trim()) {
+      if (formData.password.trim().length < 6) {
+        errors.password = "Mínimo 6 caracteres";
+      }
     }
 
     setFormErrors(errors);
@@ -241,8 +245,6 @@ export default function AdminUsuariosPage() {
           cedula: formData.cedula.trim(),
           email: formData.email.trim(),
           password: formData.password.trim(),
-          area_id: formData.areaId ? formData.areaId : null,
-          role_id: formData.roleId ? formData.roleId : null,
         });
         setUsers((prev) => [newUser, ...prev]);
         showToast({
@@ -257,6 +259,7 @@ export default function AdminUsuariosPage() {
           last_name: formData.lastName.trim(),
           cedula: formData.cedula.trim(),
           email: formData.email.trim(),
+          password: formData.password.trim() ? formData.password.trim() : undefined,
           area_id: formData.areaId ? formData.areaId : null,
           role_id: formData.roleId ? formData.roleId : null,
         });
@@ -579,63 +582,66 @@ export default function AdminUsuariosPage() {
                     <p className="text-xs text-red-600 mt-1">{formErrors.email}</p>
                   )}
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rol
-                  </label>
-                  <select
-                    value={formData.roleId}
-                    onChange={handleInputChange("roleId")}
-                    className={getInputClasses(false)}
-                  >
-                    <option value="">Selecciona un rol</option>
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Área asignada (opcional)
-                  </label>
-                  <select
-                    value={formData.areaId}
-                    onChange={handleInputChange("areaId")}
-                    className={getInputClasses(false)}
-                  >
-                    <option value="">Sin área asignada</option>
-                    {areas.map((area) => (
-                      <option key={area.id} value={area.id}>
-                        {area.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {formMode === "edit" && (
+                  <>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Rol
+                      </label>
+                      <select
+                        value={formData.roleId}
+                        onChange={handleInputChange("roleId")}
+                        className={getInputClasses(false)}
+                      >
+                        <option value="">Selecciona un rol</option>
+                        {roles.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Área asignada (opcional)
+                      </label>
+                      <select
+                        value={formData.areaId}
+                        onChange={handleInputChange("areaId")}
+                        className={getInputClasses(false)}
+                      >
+                        <option value="">Sin área asignada</option>
+                        {areas.map((area) => (
+                          <option key={area.id} value={area.id}>
+                            {area.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {formMode === "create" ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contraseña temporal
-                  </label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={handleInputChange("password")}
-                    className={getInputClasses(!!formErrors.password)}
-                    placeholder="••••••"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Se enviará al usuario para su primer ingreso.
-                  </p>
-                  {formErrors.password && (
-                    <p className="text-xs text-red-600 mt-1">{formErrors.password}</p>
-                  )}
-                </div>
-              ) : (null
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {formMode === "create" ? "Contraseña temporal" : "Cambiar contraseña"}
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange("password")}
+                  className={getInputClasses(!!formErrors.password)}
+                  placeholder={formMode === "create" ? "••••••" : "Dejar vacío para no cambiar"}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {formMode === "create"
+                    ? "Se enviará al usuario para su primer ingreso."
+                    : "Si lo dejas en blanco, la contraseña se mantiene igual."}
+                </p>
+                {formErrors.password && (
+                  <p className="text-xs text-red-600 mt-1">{formErrors.password}</p>
+                )}
+              </div>
 
               <div className="flex justify-end gap-3">
                 <Button

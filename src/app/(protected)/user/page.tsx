@@ -127,7 +127,11 @@ export default function UserHomePage() {
       item.status?.name?.toLowerCase() === "pending"
   );
 
-  const percentage = (completedAssignments.length / assignments.length) * 100
+  const totalAssignments = assignments.length;
+  const completionRate =
+    totalAssignments > 0
+      ? (completedAssignments.length / totalAssignments) * 100
+      : 0;
 
 
   return (
@@ -188,7 +192,7 @@ export default function UserHomePage() {
         />
         <StatCard
           title="Tasa de Cumplimiento"
-          value={`${percentage.toFixed() || '0'}%`}
+          value={`${completionRate.toFixed()}%`}
           icon={TrendingUp}
           color="purple"
           subtitle="De todas las asignadas"

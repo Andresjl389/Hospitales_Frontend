@@ -13,6 +13,7 @@ import {
 } from "@/types/questionnaire";
 import { capacitacionesService } from "@/services/capacitacionesService";
 import { questionnaireService } from "@/services/questionnaireService";
+import { buildMediaUrl } from "@/lib/media";
 
 // Tipos para el modal (internos del componente)
 type ModalOption = {
@@ -355,9 +356,12 @@ export default function VideoCapacitacionPage() {
             <video
               className="absolute inset-0 w-full h-full"
               controls
-              poster={capacitacion.url_image}
+              poster={buildMediaUrl(capacitacion.url_image) ?? ""}
             >
-              <source src={capacitacion.url_video} type="video/mp4" />
+              <source
+                src={buildMediaUrl(capacitacion.url_video) ?? ""}
+                type="video/mp4"
+              />
               Tu navegador no soporta el elemento de video.
             </video>
           ) : (

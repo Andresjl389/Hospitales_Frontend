@@ -22,6 +22,13 @@ interface ToastContextValue {
 }
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+const getSafeId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // Fallback simple: timestamp + random, evita depender de crypto.randomUUID
+  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
+};
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -64,7 +71,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
 
   const showToast = useCallback(
     ({ type = "info", title, description, duration = 4000 }: ToastOptions) => {
-      const id = crypto.randomUUID();
+      const id = getSafeId();
       const safeDescription = normalizeDescription(description);
       setToasts((prev) => [...prev, { id, type, title, description: safeDescription, duration }]);
 

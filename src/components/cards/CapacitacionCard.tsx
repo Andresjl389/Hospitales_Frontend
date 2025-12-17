@@ -4,6 +4,7 @@
 import Image from "next/image";
 import { UserTraining } from "@/types/capacitacion";
 import { Clock, PlayCircle, CheckCircle } from "lucide-react";
+import { buildMediaUrl } from "@/lib/media";
 
 interface CapacitacionCardProps {
   capacitacion: UserTraining;
@@ -43,7 +44,7 @@ export function CapacitacionCard({
       <div className="relative h-48 overflow-hidden bg-gray-100">
         {/* Imagen de fondo */}
         <Image
-          src={capacitacion.trainings.url_image}
+          src={buildMediaUrl(capacitacion.trainings.url_image) ?? ""}
           alt={capacitacion.trainings.title}
           width={640}
           height={320}

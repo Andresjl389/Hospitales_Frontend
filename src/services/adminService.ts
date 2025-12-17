@@ -38,6 +38,7 @@ interface UpdateUserPayload {
   email?: string;
   role_id?: string | null;
   area_id?: string | null;
+  password?: string;
 }
 
 class AdminService {
